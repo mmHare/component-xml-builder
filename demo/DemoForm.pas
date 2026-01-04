@@ -114,8 +114,6 @@ begin
   SetTags;
   SetTabOrder;
 
-
-
   LoadConfig;
 end;
 
@@ -183,7 +181,7 @@ begin
         XmlBuilder.AddComponentBind(edtServer1, 'SERVER');
         XmlBuilder.AddComponentBind(sePort1, 'PORT');
 
-        edtPassword1.PasswordChar := '*'; // if PasswordChar is set, TPanel2XmlManager will use assigned OnEncodeText, OnDecodeText functions for encryption
+        edtPassword1.PasswordChar := '*'; // if PasswordChar is set, TComponentXmlBuilder will use assigned OnEncodeText, OnDecodeText functions for encryption
       {$endregion}
 
       {$region 'pnlDatabase2'}
@@ -195,7 +193,7 @@ begin
         XmlBuilder.AddComponentBind(edtServer2, 'SERVER');
         XmlBuilder.AddComponentBind(sePort2, 'PORT');
 
-        edtPassword2.PasswordChar := '*'; // if PasswordChar is set, TPanel2XmlManager will use assigned OnEncodeText, OnDecodeText functions for encryption
+        edtPassword2.PasswordChar := '*'; // if PasswordChar is set, TComponentXmlBuilder will use assigned OnEncodeText, OnDecodeText functions for encryption
       {$endregion}
 
       {$region 'grpbxGeneral'}
@@ -303,7 +301,7 @@ begin
     edtServer1.Tag   := Ord(xmServer);
     sePort1.Tag      := Ord(xmPort);
 
-    edtPassword1.PasswordChar := '*'; // if PasswordChar is set, TPanel2XmlManager will use assigned OnEncodeText, OnDecodeText functions for encryption
+    edtPassword1.PasswordChar := '*'; // if PasswordChar is set, TComponentXmlBuilder will use assigned OnEncodeText, OnDecodeText functions for encryption
   {$endregion}
 
   {$region 'pnlDatabase2'}

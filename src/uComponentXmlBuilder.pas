@@ -8,6 +8,15 @@ uses
   Classes, Xml.XMLDoc, Xml.XMLIntf, Variants;
 
 type
+  ///  <summary>
+  ///  Builds XML from a panel hierarchy by binding controls to XML nodes,
+  ///  either by component name or by Tag-to-node mapping.
+  ///  </summary>
+  ///  <remarks>
+  ///  This class operates in one of two modes:
+  ///  (1) Name-based binding (Create): Methods AddComponentBind, RemoveComponentBind.
+  ///  (2) Tag-based binding (CreateWithTags): Methods AddCustomComponentValue, RemoveCustomComponent.
+  ///  </remarks>
   TComponentXmlBuilder = class
     private
       FPanel: TPanel;
@@ -17,7 +26,7 @@ type
       FComponentNodeBinds: TDictionary<string, string>; // [component name, node name]
       FWithTabOrder: Boolean;
       FBoolStrValue: Boolean;
-      FUseComponentNameOnly: Boolean;
+      FUseComponentNameOnly: Boolean; // Bind type by name or by tag map
 
       function GetText(Node: IXMLNode; const Name: string; Default: string): string;
       function GetInt(Node: IXMLNode; const Name: string; Default: Integer): Integer;
@@ -37,34 +46,96 @@ type
       function GetComponentNodeName(AComponent: TControl): string;
       function IsComponentOnList(AComponent: TControl): Boolean;
 
-    public
-      OnEncodeText: TFunc<string, string>;
-      OnDecodeText: TFunc<string, string>;
-
-      property PanelComponent: TPanel read FPanel;
-      property WithTabOrder: Boolean read FWithTabOrder write FWithTabOrder;
-      property BoolStrValue: Boolean read FBoolStrValue write FBoolStrValue;
-
-      procedure AddComponentBind(AComponent: TControl; ANodeName: string); overload;
-      procedure AddComponentBind(AComponent: TControl; ANodeName: string; AValue: Variant); overload; // bind name and custom value
-      procedure RemoveComponentBind(AComponent: TControl);
-
-      procedure AddCustomComponentValue(AComponent: TControl; AValue: Variant);
-      procedure RemoveCustomComponent(AComponent: TControl);
-
-      procedure AddToReadList(AComponent: TControl);
-      procedure RemoveFromReadList(AComponent: TControl);
-      function GetComponentValue(AComponent: TControl): string;
-
-      procedure ClearLists;
-
       procedure AssignPanel(APanel: TPanel);
 
-      function SaveXml(AFileName: string): Boolean;
+    public
+      ///  <summary>Optional callback used to encode component values before saving to XML.</summary>
+      ///  <remarks>Encoding will work on components with set PasswordChar property.</remarks>
+      OnEncodeText: TFunc<string, string>;
+
+      ///  <summary>Optional callback used to decode component values before saving to XML.</summary>
+      ///  <remarks>Decoding will work on components with set PasswordChar property.</remarks>
+      OnDecodeText: TFunc<string, string>;
+
+      property PanelComponent: TPanel read FPanel write AssignPanel;
+
+      /// <summary>Determines whether components are processed in TabOrder sequence.</summary>
+      property WithTabOrder: Boolean read FWithTabOrder write FWithTabOrder;
+
+      ///  <summary>Determines how Boolean values are serialized. True = 'true'/'false', False = '1'/'0'. Default is False.</summary>
+      property BoolStrValue: Boolean read FBoolStrValue write FBoolStrValue;
+
+      ///  <summary>Clears component binding lists.</summary>
+      procedure ClearLists;
+
+              {================================================}
+              {  Name-based binding (Create constructor only)  }
+              {================================================}
+
+      ///  <summary>Associates a control with an XML node name.</summary>
+      ///  <exception cref="EInvalidOperation">Raised if the builder was not created using CreateWithTags.</exception>
+      procedure AddComponentBind(AComponent: TControl; ANodeName: string); overload;
+
+      ///  <summary>Associates a control with an XML node name.</summary>
+      ///  <param name="AValue">Fixed value to be written to XML instead of reading from the component.</param>
+      ///  <exception cref="EInvalidOperation">Raised if the builder was not created using CreateWithTags.</exception>
+      procedure AddComponentBind(AComponent: TControl; ANodeName: string; AValue: Variant); overload;
+
+      ///  <summary>Removes component bind.</summary>
+      ///  <exception cref="EInvalidOperation">Raised if the builder was not created using CreateWithTags.</exception>
+      procedure RemoveComponentBind(AComponent: TControl);
+
+              {======================================================}
+              { Name-based binding (CreateWithTags constructor only) }
+              {======================================================}
+
+      ///  <summary>Adds component to list of components with bound fixed value.</summary>
+      ///  <param name="AValue">Fixed value to be written to XML instead of reading from the component.</param>
+      ///  <exception cref="EInvalidOperation">Raised if the builder was not created using Create.</exception>
+      procedure AddCustomComponentValue(AComponent: TControl; AValue: Variant);
+
+      ///  <summary>Removes component bind.</summary>
+      ///  <exception cref="EInvalidOperation">Raised if the builder was not created using Create.</exception>
+      procedure RemoveCustomComponent(AComponent: TControl);
+
+              {========================}
+              {   Read XML functions   }
+              {========================}
+
+      ///  <summary>Adds component to read list.
+      ///  The value will not be assigned to the component and can be retrieved using GetComponentValue.</summary>
+      procedure AddToReadList(AComponent: TControl);
+
+      ///  <summary>Removes component from read list.</summary>
+      procedure RemoveFromReadList(AComponent: TControl);
+
+      ///  <summary>Returns read component value if it was added to read list with "AddToReadList".</summary>
+      ///  <remarks>Raw string value read from XML.</remarks>
+      function GetComponentValue(AComponent: TControl): string;
+
+              {================================================}
+
+      ///  <summary>Reads XML file and sets values to assigned and bound controls.</summary>
+      ///  <param name="AFileName">Path for loading file.</param>
+      ///  <returns>True if values were loaded successfully.</returns>
+      ///  <exception cref="Exception">Raised if an I/O or XML parsing error occurs.</exception>
       function LoadXml(AFileName: string): Boolean;
 
+      ///  <summary>Constructs XML structure from assigned components with set oprions and save to file.</summary>
+      ///  <param name="AFileName">Path for saving file.</param>
+      ///  <returns>True if file was saved successfully.</returns>
+      ///  <exception cref="Exception">Raised if an I/O or XML parsing error occurs.</exception>
+      function SaveXml(AFileName: string): Boolean;
+
       destructor Destroy; override;
+
+      ///  <summary> Constructor for component bind operations </summary>
+      ///  <param name="APanel">Root panel containing controls to be processed. The panel is not owned by the builder.</param>
       constructor Create(APanel: TPanel); overload;
+
+      ///  <summary> Constructor for tag dictionary bind operations </summary>
+      ///  <param name="APanel">Root panel containing controls to be processed. The panel is not owned by the builder.</param>
+      ///  <param name="ADictNodeNames">Dictionary mapping Tag values to XML node names. Ownership is not transferred.</param>
       constructor CreateWithTags(APanel: TPanel; ADictNodeNames: TDictionary<Integer, string>); overload;
   end;
 
@@ -77,17 +148,26 @@ uses
 
 procedure TComponentXmlBuilder.AssignPanel(APanel: TPanel);
 begin
+  if not Assigned(APanel) then
+    raise EArgumentNilException.Create('Assigned panel cannot be nil');
+
   FPanel := APanel;
 end;
 
 procedure TComponentXmlBuilder.AddComponentBind(AComponent: TControl; ANodeName: string);
 begin
+  if not FUseComponentNameOnly then
+    raise EInvalidOperation.Create('Method can only be used with Create constructor');
+
   if Assigned(AComponent) and (ANodeName <> '') then
     FComponentNodeBinds.Add(AComponent.Name, ANodeName);
 end;
 
 procedure TComponentXmlBuilder.RemoveComponentBind(AComponent: TControl);
 begin
+  if not FUseComponentNameOnly then
+    raise EInvalidOperation.Create('Method can only be used with Create constructor');
+
   if Assigned(AComponent) then
     FComponentNodeBinds.Remove(AComponent.Name);
 end;
@@ -416,6 +496,9 @@ end;
 
 procedure TComponentXmlBuilder.AddComponentBind(AComponent: TControl; ANodeName: string; AValue: Variant);
 begin
+  if not FUseComponentNameOnly then
+    raise EInvalidOperation.Create('Method can only be used with Create constructor');
+
   AddComponentBind(AComponent, ANodeName);
   AddCustomComponentValue(AComponent, AValue);
 end;
@@ -424,6 +507,9 @@ procedure TComponentXmlBuilder.AddCustomComponentValue(AComponent: TControl; AVa
 var
   strValue: string;
 begin
+  if FUseComponentNameOnly then
+    raise EInvalidOperation.Create('Method can only be used with CreateWithTags constructor');
+
   try
     if VarIsNull(AValue) or VarIsEmpty(AValue) then begin
       strValue := '';
@@ -445,6 +531,8 @@ end;
 
 procedure TComponentXmlBuilder.RemoveCustomComponent(AComponent: TControl);
 begin
+  if FUseComponentNameOnly then
+    raise EInvalidOperation.Create('Method can only be used with CreateWithTags constructor');
   try
     FComponentValuesToSave.Remove(AComponent.Name);
   except

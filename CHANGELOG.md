@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-01-04]
+
+### Added
+
+- Documentation of class methods.
+
 ## [2025-12-20]
 
 ### Added
