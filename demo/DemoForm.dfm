@@ -7,7 +7,7 @@ object FormDemo: TFormDemo
   Margins.Bottom = 5
   Caption = 'FormDemo'
   ClientHeight = 664
-  ClientWidth = 938
+  ClientWidth = 1462
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -21,7 +21,7 @@ object FormDemo: TFormDemo
   object pnlTop: TPanel
     Left = 0
     Top = 0
-    Width = 938
+    Width = 1462
     Height = 62
     Margins.Left = 5
     Margins.Top = 5
@@ -87,7 +87,7 @@ object FormDemo: TFormDemo
   object pnlMain: TPanel
     Left = 0
     Top = 62
-    Width = 938
+    Width = 1462
     Height = 602
     Margins.Left = 5
     Margins.Top = 5
@@ -474,6 +474,102 @@ object FormDemo: TFormDemo
         Margins.Bottom = 5
         TabOrder = 3
         Text = 'medtCustom'
+      end
+    end
+    object PageControl1: TPageControl
+      Left = 936
+      Top = 10
+      Width = 505
+      Height = 555
+      Margins.Left = 5
+      Margins.Top = 5
+      Margins.Right = 5
+      Margins.Bottom = 5
+      ActivePage = TabSheet1
+      TabOrder = 3
+      object TabSheet1: TTabSheet
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'TabSheet1'
+        object pnlTs1: TPanel
+          Left = 0
+          Top = 0
+          Width = 497
+          Height = 515
+          Margins.Left = 5
+          Margins.Top = 5
+          Margins.Right = 5
+          Margins.Bottom = 5
+          Align = alClient
+          TabOrder = 0
+          ExplicitTop = -10
+          object edtTs1: TEdit
+            Left = 24
+            Top = 13
+            Width = 182
+            Height = 33
+            Margins.Left = 5
+            Margins.Top = 5
+            Margins.Right = 5
+            Margins.Bottom = 5
+            TabOrder = 0
+            Text = 'edtTs1'
+          end
+        end
+      end
+      object TabSheet2: TTabSheet
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'TabSheet2'
+        ImageIndex = 1
+        object pnlTs2: TPanel
+          Left = 0
+          Top = 0
+          Width = 497
+          Height = 515
+          Margins.Left = 5
+          Margins.Top = 5
+          Margins.Right = 5
+          Margins.Bottom = 5
+          Align = alClient
+          TabOrder = 0
+          object edtTs2: TEdit
+            Left = 12
+            Top = 13
+            Width = 265
+            Height = 95
+            Margins.Left = 5
+            Margins.Top = 5
+            Margins.Right = 5
+            Margins.Bottom = 5
+            TabOrder = 0
+            Text = 'edtTs2'
+          end
+        end
+      end
+      object TabSheet3: TTabSheet
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'TabSheet3'
+        ImageIndex = 2
+        object edtTs3: TEdit
+          Left = 5
+          Top = 5
+          Width = 313
+          Height = 97
+          Margins.Left = 5
+          Margins.Top = 5
+          Margins.Right = 5
+          Margins.Bottom = 5
+          TabOrder = 0
+          Text = 'edtTs3'
+        end
       end
     end
   end

@@ -5,12 +5,13 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.StdCtrls, Generics.Collections,
-  Vcl.Samples.Spin, Vcl.CheckLst, Vcl.Mask;
+  Vcl.Samples.Spin, Vcl.CheckLst, Vcl.Mask, Vcl.ComCtrls, uComponentXmlBuilder;
 
 type
   TXmlElementNames = (xmConfiguration=1, xmDatabase1, xmDatabase2, xmGeneral,
                       xmActive, xmDbType, xmUsername, xmPassword, xmServer, xmPort,
-                      xmDescription, xmUseOption, xmCustomText, xmLabel);
+                      xmDescription, xmUseOption, xmCustomText, xmLabel,
+                      xmPageControl, xmPage1, xmPage2, xmPage1Edt, xmPage2Edt, xmPage3Edt);
 
   TFormDemo = class(TForm)
     pnlTop: TPanel;
@@ -50,6 +51,15 @@ type
     medtCustom: TMaskEdit;
     cmbSaveOption: TComboBox;
     Label1: TLabel;
+    PageControl1: TPageControl;
+    TabSheet1: TTabSheet;
+    TabSheet2: TTabSheet;
+    pnlTs1: TPanel;
+    pnlTs2: TPanel;
+    TabSheet3: TTabSheet;
+    edtTs3: TEdit;
+    edtTs1: TEdit;
+    edtTs2: TEdit;
     procedure btnSaveClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -63,10 +73,14 @@ type
     procedure SetDictMarkers;
     procedure SetTags;
     procedure SetTabOrder;
-    procedure LoadConfig;
+
+    procedure PrepareBuilder(pXmlBuilder: TComponentXmlBuilder);
 
     procedure SaveXmlWithNamesOption;
     procedure SaveXmlWithTagOption;
+
+    procedure LoadConfigWithNamesOption;
+    procedure LoadConfigWithTagOption;
   public
     { Public declarations }
   end;
@@ -77,7 +91,7 @@ var
 implementation
 
 uses
-  uComponentXmlBuilder, IOUtils, NetEncoding;
+  IOUtils, NetEncoding;
 
 {$R *.dfm}
 
@@ -92,9 +106,37 @@ end;
 
 { TFormDemo }
 
+function TFormDemo.StringDecode(pText: string): string;
+begin
+  Result := XorCipher(TNetEncoding.Base64.Decode(pText));
+end;
+
+function TFormDemo.StringEncode(pText: string): string;
+begin
+  Result := TNetEncoding.Base64.Encode(XorCipher(pText));
+end;
+
+procedure TFormDemo.FormCreate(Sender: TObject);
+begin
+  // tag number - xml element names
+  FDictMarkers := TDictionary<Integer, string>.Create;
+
+  edtPassword1.PasswordChar := '*'; // if PasswordChar is set, TComponentXmlBuilder will use assigned OnEncodeText, OnDecodeText functions for encryption
+  edtPassword2.PasswordChar := '*';
+
+  SetDictMarkers;
+  SetTags;
+  SetTabOrder;
+
+  LoadConfigWithTagOption;
+end;
+
 procedure TFormDemo.btnLoadClick(Sender: TObject);
 begin
-  LoadConfig;
+  case cmbSaveOption.ItemIndex of
+    0: LoadConfigWithNamesOption;
+    1: LoadConfigWithTagOption;
+  end;
 end;
 
 procedure TFormDemo.btnSaveClick(Sender: TObject);
@@ -105,24 +147,129 @@ begin
   end;
 end;
 
-procedure TFormDemo.FormCreate(Sender: TObject);
-begin
-  // tag number - xml element names
-  FDictMarkers := TDictionary<Integer, string>.Create;
-
-  SetDictMarkers;
-  SetTags;
-  SetTabOrder;
-
-  LoadConfig;
-end;
-
 procedure TFormDemo.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(FDictMarkers);
 end;
 
-procedure TFormDemo.LoadConfig;
+{$region 'Names option'}
+procedure TFormDemo.PrepareBuilder(pXmlBuilder: TComponentXmlBuilder);
+begin
+  with pXmlBuilder do begin
+    // settings
+    WithTabOrder := True; // optional ordering param (default True)
+    BoolStrValue := False; // ckeckbox value format: False - 1/0; True - true/false (default False)
+    OnEncodeText := StringEncode;  // assign functions to be used in encrypting/decrypting password edits (if Edit's PasswordChar <> #0)
+    OnDecodeText := StringDecode;
+
+    // prepare binding list
+    AddComponentBind(pnlMain, 'CONFIGURATION');
+    AddComponentBind(grpbxGeneral, 'GENERAL');
+
+    {$region 'pnlDatabase1'}
+      AddComponentBind(pnlDatabase1, 'DATABASE_1');
+      AddComponentBind(chkActive1, 'ACTIVE');
+      AddComponentBind(cmbDbType1, 'DB_TYPE');
+      AddComponentBind(edtUser1, 'USERNAME');
+      AddComponentBind(edtPassword1, 'PASSWORD');
+      AddComponentBind(edtServer1, 'SERVER');
+      AddComponentBind(sePort1, 'PORT');
+    {$endregion}
+
+    {$region 'pnlDatabase2'}
+      AddComponentBind(pnlDatabase2, 'DATABASE_2');
+      AddComponentBind(chkActive2, 'ACTIVE');
+      AddComponentBind(cmbDbType2, 'DB_TYPE', cmbDbType2.Text); // works like combine with AddCustomComponentValue
+      AddComponentBind(edtUser2, 'USERNAME');
+      AddComponentBind(edtPassword2, 'PASSWORD');
+      AddComponentBind(edtServer2, 'SERVER');
+      AddComponentBind(sePort2, 'PORT');
+    {$endregion}
+
+    {$region 'grpbxGeneral'}
+      AddComponentBind(memoDescr, 'DESCRIPTION');
+      if chkDefDescr.Checked then // chkDefDescr is not added itself so it will be ommited
+        AddCustomComponentValue(memoDescr, 'This is default description.'); // overwrite value
+
+      AddComponentBind(rdgrpUseOption, 'USE_OPTION');
+      AddComponentBind(medtCustom, 'CUSTOM_TEXT', medtCustom.Text); // TMaskEdit is not supported but can be custom saved
+    {$endregion}
+
+    AddComponentBind(lblDatabase1, 'LABEL', 'Static text');  // use dummy component for static text
+
+    {$region 'PageControl'}
+      AddComponentBind(PageControl1, 'PAGES');
+      AddComponentBind(pnlTs1, 'PAGE_1');
+      AddComponentBind(edtTs1, 'P1_TEXT');
+      AddComponentBind(pnlTs2, 'PAGE_2');
+      AddComponentBind(edtTs2, 'P2_TEXT');
+      AddComponentBind(edtTs3, 'P3_TEXT');
+    {$endregion}
+
+    //assign components to be custom loaded
+    AddToReadList(cmbDbType2); // add controls which values should be put into readlist instead of loading to component itself
+    AddToReadList(medtCustom); // TMaskEdit is not supported so it will not be loaded until read explicitly
+    AddToReadList(lblDatabase1); // dummy component
+  end;
+end;
+
+procedure TFormDemo.SaveXmlWithNamesOption;
+var
+  XmlBuilder: TComponentXmlBuilder;
+  logLine: string;
+begin
+// action for saving xml file
+  XmlBuilder := TComponentXmlBuilder.Create(pnlMain);
+  try
+    try
+      PrepareBuilder(XmlBuilder);
+
+      XmlBuilder.SaveXml('panel.xml');
+    except
+      on E: Exception do
+      begin
+        ShowMessage('Error occurred while saving the file.');
+        logLine := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now) + ': ' + E.Message + sLineBreak;
+        TFile.AppendAllText('logs.txt', logLine);
+      end;
+    end;
+  finally
+    XmlBuilder.Free;
+  end;
+end;
+
+procedure TFormDemo.LoadConfigWithNamesOption;
+var
+  XmlBuilder: TComponentXmlBuilder;
+  logLine, sValue: string;
+begin
+  XmlBuilder := TComponentXmlBuilder.Create(pnlMain);
+  try
+    try
+      PrepareBuilder(XmlBuilder);
+      XmlBuilder.LoadXml('panel.xml');
+
+      // components on custom list will not be updated with read values, their values need to be get individually
+      sValue := XmlBuilder.GetComponentValue(cmbDbType2);  // returned value is always a string
+      sValue := sValue + ' : ' + XmlBuilder.GetComponentValue(lblDatabase1);
+      memoDescr.Text := sValue;
+      medtCustom.Text := XmlBuilder.GetComponentValue(medtCustom);
+    except
+      on E: Exception do
+      begin
+        ShowMessage('Error occurred while saving the file.');
+        logLine := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now) + ': ' + E.Message + sLineBreak;
+        TFile.AppendAllText('logs.txt', logLine);
+      end;
+    end;
+  finally
+    XmlBuilder.Free;
+  end;
+end;
+{$endregion}
+
+{$region 'Tag option'}
+procedure TFormDemo.LoadConfigWithTagOption;
 var
   XmlBuilder: TComponentXmlBuilder;
   logLine, sValue: string;
@@ -146,80 +293,6 @@ begin
     except
       on E: Exception do
       begin
-        logLine := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now) + ': ' + E.Message + sLineBreak;
-        TFile.AppendAllText('logs.txt', logLine);
-      end;
-    end;
-  finally
-    XmlBuilder.Free;
-  end;
-end;
-
-procedure TFormDemo.SaveXmlWithNamesOption;
-var
-  XmlBuilder: TComponentXmlBuilder;
-  logLine: string;
-begin
-// action for saving xml file
-  XmlBuilder := TComponentXmlBuilder.Create(pnlMain);
-  try
-    try
-      XmlBuilder.WithTabOrder := True; // optional ordering param (default True)
-      XmlBuilder.BoolStrValue := False; // ckeckbox value format: False - 1/0; True - true/false (default False)
-      XmlBuilder.OnEncodeText := StringEncode;  // assign function to be used in encrypting password edits (if Edit's PasswordChar <> #0)
-
-      // prepare binding list
-      XmlBuilder.AddComponentBind(pnlMain, 'CONFIGURATION');
-      XmlBuilder.AddComponentBind(grpbxGeneral, 'GENERAL');
-
-      {$region 'pnlDatabase1'}
-        XmlBuilder.AddComponentBind(pnlDatabase1, 'DATABASE_1');
-        XmlBuilder.AddComponentBind(chkActive1, 'ACTIVE');
-        XmlBuilder.AddComponentBind(cmbDbType1, 'DB_TYPE');
-        XmlBuilder.AddComponentBind(edtUser1, 'USERNAME');
-        XmlBuilder.AddComponentBind(edtPassword1, 'PASSWORD');
-        XmlBuilder.AddComponentBind(edtServer1, 'SERVER');
-        XmlBuilder.AddComponentBind(sePort1, 'PORT');
-
-        edtPassword1.PasswordChar := '*'; // if PasswordChar is set, TComponentXmlBuilder will use assigned OnEncodeText, OnDecodeText functions for encryption
-      {$endregion}
-
-      {$region 'pnlDatabase2'}
-        XmlBuilder.AddComponentBind(pnlDatabase2, 'DATABASE_2');
-        XmlBuilder.AddComponentBind(chkActive2, 'ACTIVE');
-        XmlBuilder.AddComponentBind(cmbDbType2, 'DB_TYPE', cmbDbType2.Text); // works like combine with AddCustomComponentValue
-        XmlBuilder.AddComponentBind(edtUser2, 'USERNAME');
-        XmlBuilder.AddComponentBind(edtPassword2, 'PASSWORD');
-        XmlBuilder.AddComponentBind(edtServer2, 'SERVER');
-        XmlBuilder.AddComponentBind(sePort2, 'PORT');
-
-        edtPassword2.PasswordChar := '*'; // if PasswordChar is set, TComponentXmlBuilder will use assigned OnEncodeText, OnDecodeText functions for encryption
-      {$endregion}
-
-      {$region 'grpbxGeneral'}
-        XmlBuilder.AddComponentBind(memoDescr, 'DESCRIPTION');
-        if chkDefDescr.Checked then
-          XmlBuilder.AddCustomComponentValue(memoDescr, 'This is default description.'); // overwrite value
-
-        XmlBuilder.AddComponentBind(rdgrpUseOption, 'USE_OPTION');
-        XmlBuilder.AddComponentBind(medtCustom, 'CUSTOM_TEXT', medtCustom.Text); // works like combine with AddCustomComponentValue
-//        XmlBuilder.AddComponentBind(chkDefDescr, ''); // if component is not added, it will be ommitted
-      {$endregion}
-
-
-      // component custom value save (Text instead of ItemIndex)
-//      XmlBuilder.AddCustomComponentValue(cmbDbType2, cmbDbType2.Text);
-//      XmlBuilder.AddCustomComponentValue(medtCustom, medtCustom.Text); // TMaskEdit is not supported but can be custom saved
-
-
-      XmlBuilder.AddComponentBind(lblDatabase1, 'LABEL', 'Static text');   // TLabel has no edit value but can be used with custom save as dummy for static text
-//      XmlBuilder.AddCustomComponentValue(lblDatabase1, 'Static text'); // use dummy component for static text
-
-      XmlBuilder.SaveXml('panel.xml');
-    except
-      on E: Exception do
-      begin
-        ShowMessage('Error occurred while saving the file.');
         logLine := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now) + ': ' + E.Message + sLineBreak;
         TFile.AppendAllText('logs.txt', logLine);
       end;
@@ -284,6 +357,12 @@ begin
   FDictMarkers.Add(Ord(xmUseOption), 'USE_OPTION');
   FDictMarkers.Add(Ord(xmCustomText), 'CUSTOM_TEXT');
   FDictMarkers.Add(Ord(xmLabel), 'LABEL');
+  FDictMarkers.Add(Ord(xmPageControl), 'PAGES');
+  FDictMarkers.Add(Ord(xmPage1), 'PAGE_1');
+  FDictMarkers.Add(Ord(xmPage2), 'PAGE_2');
+  FDictMarkers.Add(Ord(xmPage1Edt), 'P1_TEXT');
+  FDictMarkers.Add(Ord(xmPage2Edt), 'P2_TEXT');
+  FDictMarkers.Add(Ord(xmPage3Edt), 'P3_TEXT');
 end;
 
 procedure TFormDemo.SetTags;
@@ -324,18 +403,18 @@ begin
     chkDefDescr.Tag := -1; // -1 is not in FDictMarkers so the control will not be saved
   {$endregion}
 
+  {$region 'PageControl'}
+    PageControl1.Tag := Ord(xmPageControl);
+    pnlTs1.Tag := Ord(xmPage1);
+    edtTs1.Tag := Ord(xmPage1Edt);
+    pnlTs2.Tag := Ord(xmPage2);
+    edtTs2.Tag := Ord(xmPage2Edt);
+    edtTs3.Tag := Ord(xmPage3Edt);
+  {$endregion}
+
   lblDatabase1.Tag := Ord(xmLabel); // TLabel has no edit value but can be used with custom save as dummy for static text
 end;
-
-function TFormDemo.StringDecode(pText: string): string;
-begin
-  Result := XorCipher(TNetEncoding.Base64.Decode(pText));
-end;
-
-function TFormDemo.StringEncode(pText: string): string;
-begin
-  Result := TNetEncoding.Base64.Encode(XorCipher(pText));
-end;
+{$endregion}
 
 procedure TFormDemo.SetTabOrder;
 begin

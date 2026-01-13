@@ -5,7 +5,7 @@ interface
 uses
   Vcl.Controls, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.Samples.Spin,
   Generics.Collections, Generics.Defaults, SysUtils,
-  Classes, Xml.XMLDoc, Xml.XMLIntf, Variants;
+  Classes, Xml.XMLDoc, Xml.XMLIntf, Variants, Vcl.ComCtrls;
 
 type
   ///  <summary>
@@ -86,12 +86,11 @@ type
       procedure RemoveComponentBind(AComponent: TControl);
 
               {======================================================}
-              { Name-based binding (CreateWithTags constructor only) }
+              { Tag-based binding (CreateWithTags constructor only)  }
               {======================================================}
 
       ///  <summary>Adds component to list of components with bound fixed value.</summary>
       ///  <param name="AValue">Fixed value to be written to XML instead of reading from the component.</param>
-      ///  <exception cref="EInvalidOperation">Raised if the builder was not created using Create.</exception>
       procedure AddCustomComponentValue(AComponent: TControl; AValue: Variant);
 
       ///  <summary>Removes component bind.</summary>
@@ -307,6 +306,30 @@ begin
       controlList.Free;
     end;
   end else
+  if AControl is TPageControl then begin
+    Result := Parent.AddChild(GetComponentNodeName(AControl));
+
+    //loop through pages
+    for var J := 0 to TPageControl(AControl).PageCount - 1 do begin
+      controlList := TList<TControl>.Create;
+      try
+        if FWithTabOrder then begin
+          //sort with TabOrder
+          GetOrderedList(controlList, TWinControl(TPageControl(AControl).Pages[J]));
+
+          for var CtrlTmp in controlList do
+            AddNodeFromComponent(Result, CtrlTmp);
+        end
+        else begin
+          // order doesn't matter
+          for var I := 0 to TWinControl(TPageControl(AControl).Pages[J]).ControlCount - 1 do
+            AddNodeFromComponent(Result, TWinControl(TPageControl(AControl).Pages[J]).Controls[I]);
+        end;
+      finally
+        controlList.Free;
+      end;
+    end;
+  end else
   if FComponentValuesToSave.ContainsKey(AControl.Name) then begin
     // custom set components
     Result.AddChild(GetComponentNodeName(AControl)).Text := FComponentValuesToSave[AControl.Name];
@@ -384,14 +407,25 @@ var
   Node: IXMLNode;
   strTmp: string;
 begin
-  if not FDictNodeNames.ContainsKey(AControl.Tag) then Exit; // ignore elements with no name assigned
+  if not (IsComponentOnList(AControl) or
+         FComponentValuesRead.ContainsKey(AControl.Name)) then Exit; // ignore elements with no name assigned
 
   // Components treated as child nodes container -> recursive get node
   if (AControl is TPanel)  or (AControl is TGroupBox) then begin
     for var I := 0 to TWinControl(AControl).ControlCount - 1 do begin
       Node := GetChildByName(Parent, GetComponentNodeName(AControl));
-      if Assigned(Node) then        
+      if Assigned(Node) then
         GetComponentValueFromNode(Node, TWinControl(AControl).Controls[I]);
+    end;
+  end else
+  if AControl is TPageControl then begin
+    //loop through pages
+    for var J := 0 to TPageControl(AControl).PageCount - 1 do begin
+      for var I := 0 to TPageControl(AControl).Pages[J].ControlCount - 1 do begin
+        Node := GetChildByName(Parent, GetComponentNodeName(AControl));
+        if Assigned(Node) then
+          GetComponentValueFromNode(Node, TPageControl(AControl).Pages[J].Controls[I]);
+      end;
     end;
   end else
   // load custom list
@@ -507,9 +541,6 @@ procedure TComponentXmlBuilder.AddCustomComponentValue(AComponent: TControl; AVa
 var
   strValue: string;
 begin
-  if FUseComponentNameOnly then
-    raise EInvalidOperation.Create('Method can only be used with CreateWithTags constructor');
-
   try
     if VarIsNull(AValue) or VarIsEmpty(AValue) then begin
       strValue := '';

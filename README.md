@@ -30,13 +30,14 @@ B) Binding XML element component __Tag__ property. Constructor *CreateWithTags* 
 | Component   | Representing element                                            | Component property |
 |-------------|-----------------------------------------------------------------|--------------------|
 | TPanel      | Element containing child nodes                                  | --- |
-| TGroupBox   | Element like TPanel but cannot be used as main panel            | --- |
+| TGroupBox   | Element container like TPanel but cannot be used as main panel  | --- |
 | TEdit       | Element with text value (option for encryption)                 | Text, encryption if PasswordChar |
 | TMemo       | Element with text value                                         | Text(save)/Lines(load) |
 | TSpinEdit   | Element with numeric text value                                 | Value |
 | TComboBox   | Element with numeric value of ItemIndex                         | ItemIndex |
 | TRadioGroup | Element with numeric value of ItemIndex                         | ItemIndex |
 | TCheckBox   | Element with boolean (checked) value (1/0 or true/false format) | Checked |
+| TPageControl| Element container like TPanel but cannot be used as main panel  | --- |
 
 ## Additional properties
 
@@ -50,6 +51,7 @@ B) Binding XML element component __Tag__ property. Constructor *CreateWithTags* 
 
 - If component has Tag value that is not in names dictionary it will be ignored. This can be used to exclude certain values from being saved but also it is important to set correct Tag numbers.
 - TPanel that is not bound to node name will be ignored (including owned components).
+- TTabSheet of assigned TPageControl element is treated like separator. Pages' components will be saved on the same level, owned by page control node.
 - Custom save option can be used with some dummy components for static text - like TLabel which doesn't have edit value (however TLabel doesn't have TabOrder property so it might break the ordering, so it is recommended to use components that have this property). Similarly custom read option can be used with dummy to read specific XML element, as well as exclude components from updating their values.
 - Passwords in demo project are obfuscated, not encrypted. This is for demonstration purposes only.
 

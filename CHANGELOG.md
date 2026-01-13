@@ -1,5 +1,19 @@
 # Changelog
 
+## [2026-01-13]
+
+### Added
+
+- TPageControl support.
+
+### Fixed
+
+- Loading XML with Name-binding option.
+
+### Changed
+
+- Tidied up Demo project.
+
 ## [2026-01-04]
 
 ### Added
